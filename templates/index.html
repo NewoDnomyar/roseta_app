@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roseta App - Edit, Format, and Print</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Cropper.js CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" rel="stylesheet">
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f7f6;
+        }
+        .navbar {
+            background-color: #343a40;
+        }
+        .container h2 {
+            margin-top: 2rem;
+            color: #343a40;
+        }
+        .btn-primary {
+            background-color: #0069d9;
+            border-color: #0062cc;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #004085;
+        }
+        #image {
+            max-width: 100%;
+            display: none;
+            margin-top: 20px;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .image-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .image-item {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .image-item img {
+            max-width: 100px;
+            margin-right: 10px;
+        }
+        #preview-container {
+            margin-top: 20px;
+        }
+        #preview-pdf {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <a class="navbar-brand" href="#">Roseta App</a>
+    </nav>
+
+    <!-- Flash messages -->
+    <div class="container">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-success mt-3">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- File Upload Form -->
+    <div class="container mt-5">
+        <h2>Upload, Edit, and Format Your Images</h2>
+        <form id="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file" class="btn btn-secondary btn-lg">
+                    <input type="file" id="file" name="file" multiple hidden>
+                    Choose Images
+                </label>
+            </div>
+            <ul id="image-list" class="image-list"></ul>
+            <button type="submit" class="btn btn-primary">Format and Generate PDF</button>
+        </form>
+
+        <!-- Image preview and crop area -->
+        <div>
+            <img id="image">
+        </div>
+
+        <!-- Controls for cropping, rotating, brightness, and contrast -->
+        <div class="controls" style="display: none;">
+            <button id="rotate-left" class="btn btn-secondary">Rotate Left</button>
+            <button id="rotate-right" class="btn btn-secondary">Rotate Right</button>
+            <label for="brightness">Brightness:</label>
+            <input type="range" id="brightness" min="-100" max="100" value="0">
+            <label for="contrast">Contrast:</label>
+            <input type="range" id="contrast" min="-100" max="100" value="0">
+            <button id="apply-filters" class="btn btn-secondary">Apply Filters</button>
+            <button id="crop" class="btn btn-primary">Crop & Save Image</button>
+        </div>
+
+        <!-- PDF Preview Section -->
+        <div id="preview-container" class="mt-5">
+            <h3>PDF Preview</h3>
+            <iframe id="preview-pdf" src=""></iframe>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-3 text-center">
+        <div class="container">
+            <span class="text-muted">© 2024 Roseta App. All rights reserved.</span>
+        </div>
+    </footer>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/camanjs/4.1.2/caman.full.min.js"></script>
+
+    <!-- JavaScript for Image Handling and Editing -->
+    <script>
+        let cropper;
+        let filesArray = [];
+        const image = document.getElementById('image');
+        const fileInput = document.getElementById('file');
+        const imageList = document.getElementById('image-list');
+        const rotateLeftButton = document.getElementById('rotate-left');
+        const rotateRightButton = document.getElementById('rotate-right');
+        const cropButton = document.getElementById('crop');
+        const brightnessSlider = document.getElementById('brightness');
+        const contrastSlider = document.getElementById('contrast');
+        const applyFiltersButton = document.getElementById('apply-filters');
+        const controls = document.querySelector('.controls');
+        const previewPdf = document.getElementById('preview-pdf');
+
+        fileInput.addEventListener('change', handleFiles);
+
+        function handleFiles() {
+            const files = Array.from(fileInput.files);
+            filesArray = filesArray.concat(files);
+            updateImageList();
+        }
+
+        function updateImageList() {
+            imageList.innerHTML = '';
+            filesArray.forEach((file, index) => {
+                const li = document.createElement('li');
+                li.className = 'image-item';
+                
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.addEventListener('click', () => editImage(file, index));
+                
+                const span = document.createElement('span');
+                span.textContent = file.name;
+
+                li.appendChild(img);
+                li.appendChild(span);
+                imageList.appendChild(li);
+            });
+        }
+
+        function editImage(file, index) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                image.src = e.target.result;
+                image.style.display = 'block';
+                controls.style.display = 'block';
+
+                if (cropper) {
+                    cropper.destroy();
+                }
+                cropper = new Cropper(image, {
+                    aspectRatio: 16 / 9,
+                    viewMode: 1
+                });
+
+                cropButton.onclick = () => {
+                    cropper.getCroppedCanvas().toBlob(function(blob) {
+                        filesArray[index] = new File([blob], file.name, {type: blob.type});
+                        updateImageList();
+                        controls.style.display = 'none';
+                    });
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>

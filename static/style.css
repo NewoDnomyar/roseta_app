@@ -1,0 +1,41 @@
+body {
+    background-color: #f8f9fa;
+}
+
+h1 {
+    color: #007bff;
+}
+
+.navbar {
+    margin-bottom: 20px;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+    background-color: #0069d9;
+    border-color: #0062cc;
+}
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        flash('No file part')
+        return redirect(request.url)
+    file = request.files['file']
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(request.url)
+    if file:
+        filename = file.filename
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        # Format the image for credit card layout
+        formatted_path = format_image_for_credit_card_layout(filepath)
+        flash('File successfully uploaded and formatted.')
+
+        # Redirect to download the formatted PDF
+        return redirect(url_for('download_file', filename='formatted_document.pdf'))
