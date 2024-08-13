@@ -33,6 +33,8 @@
             max-width: 100%;
             display: none;
             margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
         .controls {
             margin-top: 20px;
@@ -40,15 +42,34 @@
         .image-list {
             list-style-type: none;
             padding: 0;
+            max-height: 200px;
+            overflow-y: auto;
         }
         .image-item {
             margin: 10px 0;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fff;
         }
         .image-item img {
             max-width: 100px;
             margin-right: 10px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .image-item img:hover {
+            transform: scale(1.1);
+        }
+        .image-item button {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            font-size: 1.2rem;
         }
         #preview-container {
             margin-top: 20px;
@@ -57,13 +78,15 @@
             width: 100%;
             height: 500px;
             border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
-        <a class="navbar-brand" href="#">Roseta App</a>
+        <a class="navbar-brand" href="#">Roseta notes</a>
     </nav>
 
     <!-- Flash messages -->
@@ -165,8 +188,13 @@
                 const span = document.createElement('span');
                 span.textContent = file.name;
 
+                const deleteButton = document.createElement('button');
+                deleteButton.innerHTML = '&times;';
+                deleteButton.onclick = () => deleteImage(index);
+
                 li.appendChild(img);
                 li.appendChild(span);
+                li.appendChild(deleteButton);
                 imageList.appendChild(li);
             });
         }
@@ -195,6 +223,13 @@
                 };
             };
             reader.readAsDataURL(file);
+        }
+
+        function deleteImage(index) {
+            if (confirm('Are you sure you want to delete this image?')) {
+                filesArray.splice(index, 1);
+                updateImageList();
+            }
         }
     </script>
 </body>
